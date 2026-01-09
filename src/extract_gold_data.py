@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 import sys
 
-from config import (
+from .config import (
     GOLD_TICKER,
     BACKUP_PATH,
     DAILY_PATH,
@@ -16,31 +16,31 @@ from config import (
 
 def extract_historical_data(start_date: datetime, end_date: datetime = None) -> pd.DataFrame:
     """
-    Extrai dados históricos do ouro via yfinance
+    Extract historical gold data via yfinance
     
     Args:
-        start_date: Data inicial
-        end_date: Data final (padrão: hoje)
+        start_date: Start date
+        end_date: End date (default: today)
     
     Returns:
-        DataFrame com colunas: date, max_price, min_price, closed_price
+        DataFrame with columns: date, max_price, min_price, closed_price
     """
     if end_date is None:
         end_date = datetime.now()
     
-    print(f"📊 Extraindo dados de {GOLD_TICKER}")
-    print(f"📅 Período: {start_date.date()} até {end_date.date()}")
+    print(f"📊 Extracting data from {GOLD_TICKER}")
+    print(f"📅 Period: {start_date.date()} to {end_date.date()}")
     
     try:
-        # Baixar dados do Yahoo Finance
+        # Download data from Yahoo Finance
         gold = yf.Ticker(GOLD_TICKER)
         df = gold.history(start=start_date, end=end_date)
         
         if df.empty:
-            print("⚠️ Nenhum dado retornado pelo yfinance")
+            print("⚠️ No data returned from yfinance")
             return pd.DataFrame()
         
-        # Padronizar colunas
+        # Standardize columns
         df_clean = pd.DataFrame({
             'date': df.index,
             'max_price': df['High'].values,
@@ -48,71 +48,71 @@ def extract_historical_data(start_date: datetime, end_date: datetime = None) -> 
             'closed_price': df['Close'].values
         })
         
-        # Resetar index e converter date para datetime sem timezone
+        # Reset index and convert date to datetime without timezone
         df_clean['date'] = pd.to_datetime(df_clean['date']).dt.tz_localize(None)
         df_clean = df_clean.reset_index(drop=True)
         
-        # Garantir tipos corretos
+        # Ensure correct types
         df_clean['max_price'] = df_clean['max_price'].astype(float)
         df_clean['min_price'] = df_clean['min_price'].astype(float)
         df_clean['closed_price'] = df_clean['closed_price'].astype(float)
         
-        print(f"✅ {len(df_clean)} registros extraídos")
+        print(f"✅ {len(df_clean)} records extracted")
         return df_clean
         
     except Exception as e:
-        print(f"❌ Erro ao extrair dados: {e}")
+        print(f"❌ Error extracting data: {e}")
         return pd.DataFrame()
 
 
 def create_backup():
     """
-    Cria backup completo dos últimos 3 anos
+    Create complete backup of last 3 years
     """
     print("=" * 60)
-    print("🔄 CRIANDO BACKUP HISTÓRICO (3 ANOS)")
+    print("🔄 CREATING HISTORICAL BACKUP (3 YEARS)")
     print("=" * 60)
     
     start_date = get_backup_start_date()
     df = extract_historical_data(start_date)
     
     if df.empty:
-        print("❌ Falha ao criar backup")
+        print("❌ Failed to create backup")
         sys.exit(1)
     
-    # Salvar backup
+    # Save backup
     df.to_parquet(BACKUP_PATH, index=False)
-    print(f"✅ Backup salvo: {BACKUP_PATH}")
-    print(f"📊 Total de registros: {len(df)}")
-    print(f"📅 Período: {df['date'].min()} até {df['date'].max()}")
+    print(f"✅ Backup saved: {BACKUP_PATH}")
+    print(f"📊 Total records: {len(df)}")
+    print(f"📅 Period: {df['date'].min()} to {df['date'].max()}")
     
-    # Atualizar checkpoint
+    # Update checkpoint
     with open(CHECKPOINT_PATH, 'w') as f:
         f.write(df['date'].max().isoformat())
     
-    print(f"✅ Checkpoint atualizado: {df['date'].max().date()}")
+    print(f"✅ Checkpoint updated: {df['date'].max().date()}")
     return df
 
 
 def incremental_update():
     """
-    Atualização incremental: adiciona apenas dados novos
+    Incremental update: adds only new data
     """
     print("=" * 60)
-    print("🔄 ATUALIZAÇÃO INCREMENTAL")
+    print("🔄 INCREMENTAL UPDATE")
     print("=" * 60)
     
-    # Verificar se existe checkpoint
+    # Check if checkpoint exists
     if not CHECKPOINT_PATH.exists():
-        print("⚠️ Checkpoint não encontrado. Criando backup completo...")
+        print("⚠️ Checkpoint not found. Creating complete backup...")
         return create_backup()
     
-    # Ler última data processada
+    # Read last processed date
     with open(CHECKPOINT_PATH, 'r') as f:
         last_update_str = f.read().strip()
         last_update = pd.to_datetime(last_update_str)
     
-    print(f"📅 Última atualização: {last_update.date()}")
+    print(f"📅 Last update: {last_update.date()}")
     
     # Calcular período incremental
     last_business_day = get_last_business_day()
@@ -139,12 +139,12 @@ def incremental_update():
         print(f"📂 Dados existentes: {len(df_existing)} registros")
     else:
         df_existing = pd.DataFrame()
-        print("📂 Criando arquivo de dados diários")
+        print("📂 Creating daily data file")
     
-    # Consolidar dados
+    # Consolidate data
     df_consolidated = pd.concat([df_existing, df_new], ignore_index=True)
     
-    # Remover duplicatas (caso existam)
+    # Remove duplicates (if any)
     df_consolidated = df_consolidated.drop_duplicates(subset=['date'], keep='last')
     df_consolidated = df_consolidated.sort_values('date').reset_index(drop=True)
     
@@ -170,7 +170,7 @@ def incremental_update():
 
 def main():
     """
-    Função principal: decide entre backup ou incremental
+    Main function: decides between backup or incremental
     """
     import sys
     

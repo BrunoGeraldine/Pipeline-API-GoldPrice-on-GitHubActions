@@ -5,14 +5,14 @@ from typing import List, Optional
 from datetime import datetime, date
 import pandas as pd
 
-from config import DAILY_PATH, BACKUP_PATH, API_HOST, API_PORT
+from .config import DAILY_PATH, BACKUP_PATH, API_HOST, API_PORT
 
 # Modelos Pydantic
 class GoldPrice(BaseModel):
-    date: datetime = Field(..., description="Data do registro")
-    max_price: float = Field(..., description="Preço máximo do dia")
-    min_price: float = Field(..., description="Preço mínimo do dia")
-    closed_price: float = Field(..., description="Preço de fechamento")
+    date: datetime = Field(..., description="Record date")
+    max_price: float = Field(..., description="Maximum price of the day")
+    min_price: float = Field(..., description="Minimum price of the day")
+    closed_price: float = Field(..., description="Closing price")
     
     class Config:
         json_schema_extra = {
@@ -37,13 +37,13 @@ class GoldPriceStats(BaseModel):
 # Criar aplicação FastAPI
 app = FastAPI(
     title="Gold Price API",
-    description="API para consulta de preços históricos do ouro",
+    description="API for querying historical gold prices",
     version="1.0.0"
 )
 
 
 def load_data() -> pd.DataFrame:
-    """Carrega dados do arquivo parquet"""
+    """Load data from parquet file"""
     if DAILY_PATH.exists():
         df = pd.read_parquet(DAILY_PATH)
     elif BACKUP_PATH.exists():
@@ -51,40 +51,40 @@ def load_data() -> pd.DataFrame:
     else:
         raise HTTPException(
             status_code=404,
-            detail="Nenhum dado disponível. Execute a pipeline primeiro."
+            detail="No data available. Run the pipeline first."
         )
     
-    # Garantir que date está em datetime
+    # Ensure date is datetime
     df['date'] = pd.to_datetime(df['date'])
     return df
 
 
 @app.get("/", tags=["Info"])
 def read_root():
-    """Endpoint raiz com informações da API"""
+    """Root endpoint with API information"""
     return {
         "message": "Gold Price API",
         "version": "1.0.0",
         "endpoints": {
-            "GET /prices": "Lista todos os preços",
-            "GET /prices/latest": "Último preço disponível",
-            "GET /prices/date/{date}": "Preço em data específica",
-            "GET /prices/range": "Preços em período específico",
-            "GET /stats": "Estatísticas dos dados"
+            "GET /prices": "Get all prices",
+            "GET /prices/latest": "Get latest available price",
+            "GET /prices/date/{date}": "Get price on specific date",
+            "GET /prices/range": "Get prices in specific period",
+            "GET /stats": "Get data statistics"
         }
     }
 
 
 @app.get("/prices", response_model=List[GoldPrice], tags=["Prices"])
 def get_all_prices(
-    limit: int = Query(100, ge=1, le=1000, description="Número máximo de registros"),
-    skip: int = Query(0, ge=0, description="Número de registros para pular")
+    limit: int = Query(100, ge=1, le=1000, description="Maximum number of records"),
+    skip: int = Query(0, ge=0, description="Number of records to skip")
 ):
     """
-    Retorna lista de preços do ouro
+    Returns list of gold prices
     
-    - **limit**: Número máximo de registros (padrão: 100, máx: 1000)
-    - **skip**: Paginação - registros para pular (padrão: 0)
+    - **limit**: Maximum number of records (default: 100, max: 1000)
+    - **skip**: Pagination - records to skip (default: 0)
     """
     df = load_data()
     df_sorted = df.sort_values('date', ascending=False)
@@ -97,7 +97,7 @@ def get_all_prices(
 
 @app.get("/prices/latest", response_model=GoldPrice, tags=["Prices"])
 def get_latest_price():
-    """Retorna o preço mais recente disponível"""
+    """Returns the most recent available price"""
     df = load_data()
     latest = df.loc[df['date'].idxmax()]
     return latest.to_dict()
@@ -106,22 +106,22 @@ def get_latest_price():
 @app.get("/prices/date/{target_date}", response_model=GoldPrice, tags=["Prices"])
 def get_price_by_date(target_date: date):
     """
-    Retorna preço em data específica
+    Returns price on specific date
     
-    - **target_date**: Data no formato YYYY-MM-DD
+    - **target_date**: Date in format YYYY-MM-DD
     """
     df = load_data()
     
-    # Converter target_date para datetime
+    # Convert target_date to datetime
     target_dt = pd.to_datetime(target_date)
     
-    # Buscar data exata
+    # Search exact date
     df_filtered = df[df['date'].dt.date == target_date]
     
     if df_filtered.empty:
         raise HTTPException(
             status_code=404,
-            detail=f"Nenhum dado encontrado para a data {target_date}"
+            detail=f"No data found for date {target_date}"
         )
     
     return df_filtered.iloc[0].to_dict()
@@ -129,25 +129,25 @@ def get_price_by_date(target_date: date):
 
 @app.get("/prices/range", response_model=List[GoldPrice], tags=["Prices"])
 def get_prices_by_range(
-    start_date: date = Query(..., description="Data inicial (YYYY-MM-DD)"),
-    end_date: date = Query(..., description="Data final (YYYY-MM-DD)")
+    start_date: date = Query(..., description="Start date (YYYY-MM-DD)"),
+    end_date: date = Query(..., description="End date (YYYY-MM-DD)")
 ):
     """
-    Retorna preços em um período específico
+    Returns prices in a specific period
     
-    - **start_date**: Data inicial
-    - **end_date**: Data final
+    - **start_date**: Start date
+    - **end_date**: End date
     """
     df = load_data()
     
-    # Filtrar por período
+    # Filter by period
     mask = (df['date'].dt.date >= start_date) & (df['date'].dt.date <= end_date)
     df_filtered = df[mask].sort_values('date')
     
     if df_filtered.empty:
         raise HTTPException(
             status_code=404,
-            detail=f"Nenhum dado encontrado entre {start_date} e {end_date}"
+            detail=f"No data found between {start_date} and {end_date}"
         )
     
     return df_filtered.to_dict('records')
@@ -155,7 +155,7 @@ def get_prices_by_range(
 
 @app.get("/stats", response_model=GoldPriceStats, tags=["Statistics"])
 def get_statistics():
-    """Retorna estatísticas dos dados disponíveis"""
+    """Returns statistics of available data"""
     df = load_data()
     
     return {
@@ -170,7 +170,7 @@ def get_statistics():
 
 @app.get("/health", tags=["Health"])
 def health_check():
-    """Verifica saúde da API e disponibilidade dos dados"""
+    """Check API health and data availability"""
     try:
         df = load_data()
         return {
