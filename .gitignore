@@ -6,6 +6,14 @@ __pycache__/
 # C extensions
 *.so
 
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
 # Distribution / packaging
 .Python
 build/
@@ -54,6 +62,13 @@ cover/
 # Translations
 *.mo
 *.pot
+
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
 
 # Django stuff:
 *.log
@@ -136,6 +151,7 @@ celerybeat.pid
 
 # Environments
 .env
+.env.local
 .envrc
 .venv
 env/
@@ -143,6 +159,36 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
 # Spyder project settings
 .spyderproject
