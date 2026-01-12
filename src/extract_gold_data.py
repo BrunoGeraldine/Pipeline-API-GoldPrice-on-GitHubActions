@@ -4,7 +4,16 @@ from datetime import datetime
 from pathlib import Path
 import sys
 
-from .config import (
+#from .config import (
+#    GOLD_TICKER,
+#    BACKUP_PATH,
+#    DAILY_PATH,
+#    CHECKPOINT_PATH,
+#    get_backup_start_date,
+#    get_last_business_day
+#)
+
+from config import (
     GOLD_TICKER,
     BACKUP_PATH,
     DAILY_PATH,
@@ -12,7 +21,6 @@ from .config import (
     get_backup_start_date,
     get_last_business_day
 )
-
 
 def extract_historical_data(start_date: datetime, end_date: datetime = None) -> pd.DataFrame:
     """

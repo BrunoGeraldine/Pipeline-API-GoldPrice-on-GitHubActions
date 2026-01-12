@@ -20,6 +20,9 @@ permissions:
 jobs:
   update-gold-data:
     runs-on: ubuntu-latest
+
+    env:
+      PYTHONPATH: src
     
     steps:
       # --------------------------------------------------
@@ -77,6 +80,7 @@ jobs:
           echo "🔄 CRIANDO BACKUP HISTÓRICO (3 ANOS)"
           echo "=" * 60
           python src/extract_gold_data.py --backup
+        
 
       # --------------------------------------------------
       # Incremental update
@@ -88,6 +92,7 @@ jobs:
           echo "🔄 ATUALIZAÇÃO INCREMENTAL"
           echo "=" * 60
           python src/extract_gold_data.py
+        
 
       # --------------------------------------------------
       # Verify data files
@@ -112,6 +117,7 @@ jobs:
             echo "✅ Checkpoint file exists"
             echo "Last update: $(cat dataset/last_update.txt)"
           fi
+        
 
       # --------------------------------------------------
       # Commit changes
